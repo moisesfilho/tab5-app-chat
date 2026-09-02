@@ -1,0 +1,20 @@
+{
+  "id": "com.tab5.chat",
+  "name": "Chat IA",
+  "version": "1.0.0",
+  "author": "Tab5 OS Team",
+  "description": "Assistente inteligente e chat interativo com modelos de linguagem no Tab5 OS.",
+  "entry": "app.wasm",
+  "icon_symbol": "LV_SYMBOL_COMMENT",
+  "icon_bg_color": "#06B6D4",
+  "file_associations": [
+    ".json"
+  ],
+  "permissions": [
+    "network",
+    "ui.keyboard",
+    "storage.readwrite"
+  ],
+  "stack_size": 65536,
+  "heap_size": 131072
+}
