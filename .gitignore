@@ -1,4 +1,5 @@
 build/
 dist/
+tests/.build/
 *.wasm
 .DS_Store
