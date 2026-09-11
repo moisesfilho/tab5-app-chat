@@ -9,8 +9,9 @@
 #   1. s_messages_cont, s_input_cont, s_modal e s_modal_backdrop usam largura
 #      TAB5_UI_PCT(100) (-1100) em vez de largura absoluta `w`.
 #   2. ALTURAS: messages_cont = msg_h, input_cont = INPUT_H (preservadas);
-#      modal/backdrop = TAB5_UI_PCT(100) e card = TAB5_UI_PCT(96) x TAB5_UI_PCT(60)
-#      (contrato relativo — nada de h/card_h/usable_h no caminho modal).
+#      modal/backdrop = TAB5_UI_PCT(100) e card = TAB5_UI_PCT(96) x
+#      TAB5_UI_SIZE_CONTENT (altura automática — contrato relativo; nada de
+#      h/card_h/usable_h no caminho modal).
 #   3. Preservar TECLADO: input ancorado BOTTOM_LEFT com -(kb_h + INPUT_GAP) e
 #      apply_modal_layout continuam ajustando com kb_h.
 #   4. Preservar ALINHAMENTO: TOP_LEFT para messages/modal/backdrop, BOTTOM_LEFT
@@ -119,11 +120,11 @@ else
     run_test "s_modal height = TAB5_UI_PCT(100) (relativo)" "FAIL"
 fi
 
-# A8b. card = PCT(96) x PCT(60) (contrato pleno do card)
-if grep -qP 'tab5_ui_obj_set_size\(\s*(?:s_modal_card|card)\s*,\s*TAB5_UI_PCT\(\s*96\s*\),\s*TAB5_UI_PCT\(\s*60\s*\)' "${SRC}"; then
-    run_test "card = TAB5_UI_PCT(96) x TAB5_UI_PCT(60) (relativo)" "PASS"
+# A8b. card = PCT(96) x SIZE_CONTENT (contrato pleno do card — auto-height)
+if grep -qP 'tab5_ui_obj_set_size\(\s*(?:s_modal_card|card)\s*,\s*TAB5_UI_PCT\(\s*96\s*\),\s*TAB5_UI_SIZE_CONTENT\s*\)' "${SRC}"; then
+    run_test "card = TAB5_UI_PCT(96) x TAB5_UI_SIZE_CONTENT (auto-height)" "PASS"
 else
-    run_test "card = TAB5_UI_PCT(96) x TAB5_UI_PCT(60) (relativo)" "FAIL"
+    run_test "card = TAB5_UI_PCT(96) x TAB5_UI_SIZE_CONTENT (auto-height)" "FAIL"
 fi
 
 # A9. backdrop altura = TAB5_UI_PCT(100) (contrato relativo 100%×100%)
@@ -307,13 +308,14 @@ static int obj_card     = 5;
 
 static void apply_modal_layout_target(int32_t kb_h) {
     /* Contrato relativo (plano aprovado): modal/backdrop PCT(100) x PCT(100),
-     * card PCT(96) x PCT(60) com CENTER offset -(kb_h/2). Nenhuma dimensão
-     * absoluta do host (h/card_h/usable_h) no caminho modal. */
+     * card PCT(96) x SIZE_CONTENT (altura automática — nada rola: grade 2x2)
+     * com CENTER offset -(kb_h/2). Nenhuma dimensão absoluta do host
+     * (h/card_h/usable_h) no caminho modal. */
     tab5_ui_obj_set_size(obj_modal, TAB5_UI_PCT(100), TAB5_UI_PCT(100));
     tab5_ui_obj_set_align(obj_modal, TAB5_UI_ALIGN_TOP_LEFT, 0, 0);
     tab5_ui_obj_set_size(obj_backdrop, TAB5_UI_PCT(100), TAB5_UI_PCT(100));
     tab5_ui_obj_set_align(obj_backdrop, TAB5_UI_ALIGN_TOP_LEFT, 0, 0);
-    tab5_ui_obj_set_size(obj_card, TAB5_UI_PCT(96), TAB5_UI_PCT(60));
+    tab5_ui_obj_set_size(obj_card, TAB5_UI_PCT(96), TAB5_UI_SIZE_CONTENT);
     tab5_ui_obj_set_align(obj_card, TAB5_UI_ALIGN_CENTER, 0, -(kb_h / 2));
 }
 
@@ -401,7 +403,8 @@ int main(void) {
         check(bh == -1100, "backdrop height == TAB5_UI_PCT(100) == -1100 (relativo, sem h)");
         check(find_ss(obj_card, &cw, &ch), "card sized");
         check(cw == -1096, "card width == TAB5_UI_PCT(96) == -1096 (relativo, sem w-48)");
-        check(ch == -1060, "card height == TAB5_UI_PCT(60) == -1060 (relativo, sem card_h)");
+        check(ch == TAB5_UI_SIZE_CONTENT,
+              "card height == TAB5_UI_SIZE_CONTENT == -1 (auto-height, sem card_h)");
         int a, x, y;
         check(find_sa(obj_modal, &a, &x, &y), "modal aligned");
         check(a == TAB5_UI_ALIGN_TOP_LEFT && x == 0 && y == 0,

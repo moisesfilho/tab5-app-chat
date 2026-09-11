@@ -12,9 +12,12 @@
 #     Σ(base widths) + gaps <= largura do row em todos os papéis.
 #   REQ-003 -> TEST-102: build_chat_ui fixa altura de s_input_ta em
 #     TAB5_UI_PCT(100) (nunca overflow vertical em s_input_cont).
-#   REQ-004 -> TEST-100: únicos set_scrollable(..., true) são s_messages_cont e
-#     s_modal_card; scr/row/spacer/second_spacer/bubble/s_input_cont/s_input_ta
-#     são todos false (regressão do scroll do input).
+#   REQ-004 -> TEST-100: O ÚNICO set_scrollable(..., true) do arquivo é
+#     s_messages_cont. Nenhum objeto do modal é rolável: cfg_body agora é
+#     set_scrollable(false); scr/row/spacer/second_spacer/bubble/s_input_cont/
+#     s_input_ta/s_modal/s_modal_backdrop/s_modal_card/btns/s_cfg_url/s_cfg_token/
+#     s_cfg_model/s_cfg_max_tokens são todos false (regressão do scroll do
+#     input e do modal compacto 2x2 do plano aprovado).
 #
 # Estado: H1 (gap system=0) e H2 (altura do s_input_ta em TAB5_UI_PCT(100))
 # estão implementados em src/main.c. O runtime TEST-103 extrai o gap REAL do
@@ -48,9 +51,9 @@ run_test() {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# TEST-100 — greps/extação: únicos scrollables true são messages_cont/modal_card
+# TEST-100 — greps/extração: O ÚNICO set_scrollable(..., true) é s_messages_cont
 # ─────────────────────────────────────────────────────────────────────────────
-echo "--- TEST-100: únicos set_scrollable(..., true) são s_messages_cont e s_modal_card ---"
+echo "--- TEST-100: único set_scrollable(..., true) do arquivo é s_messages_cont ---"
 
 set +e
 SRC_PATH="${SRC}" python3 - <<'PY'
@@ -60,12 +63,20 @@ import sys
 
 source = open(os.environ["SRC_PATH"], encoding="utf-8").read()
 
+# Extrai QUALQUER set_scrollable(X, valor) de src/main.c inteiro (não apenas
+# uma lista fixa de alvos): o contrato novo é "apenas s_messages_cont=true no
+# arquivo", então NENHUM outro objeto pode receber true, com qualquer nome.
 calls = re.findall(
-    r"tab5_ui_obj_set_scrollable\(\s*"
-    r"(scr|row|spacer|second_spacer|bubble|s_messages_cont|s_input_cont|s_input_ta|s_modal_card)"
-    r"\s*,\s*(true|false)\s*\)",
+    r"tab5_ui_obj_set_scrollable\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*,\s*(true|false)\s*\)",
     source,
 )
+
+required_false = [
+    "scr", "row", "spacer", "second_spacer", "bubble",
+    "s_input_cont", "s_input_ta",
+    "s_modal", "s_modal_backdrop", "s_modal_card", "cfg_body", "btns",
+    "s_cfg_url", "s_cfg_token", "s_cfg_model", "s_cfg_max_tokens",
+]
 
 failures = 0
 def require(condition, message):
@@ -77,11 +88,16 @@ def require(condition, message):
         failures += 1
 
 true_targets = sorted(set(name for name, val in calls if val == "true"))
-require(true_targets == ["s_messages_cont", "s_modal_card"],
-        "únicos set_scrollable(..., true) = s_messages_cont e s_modal_card "
-        "(sem scroll em input/bubbles)")
+require(true_targets == ["s_messages_cont"],
+        "únicos set_scrollable(..., true) do arquivo = [s_messages_cont] "
+        f"(obtido: {true_targets if true_targets else 'NENHUM'})")
 
-for target in ["scr", "row", "spacer", "second_spacer", "bubble", "s_input_cont", "s_input_ta"]:
+# Regra forte: todo set_scrollable que NÃO é s_messages_cont deve ser false.
+bad_true = sorted(set(name for name, val in calls if val == "true" and name != "s_messages_cont"))
+require(not bad_true,
+        "NENHUM objeto além de s_messages_cont usa set_scrollable(true)")
+
+for target in required_false:
     require(any(name == target and val == "false" for name, val in calls),
             f"{target} -> set_scrollable(false)")
 
@@ -396,7 +412,8 @@ echo "  estáticos (TEST-100/101/102): ${PASS} passed, ${FAIL} failed, ${TOTAL} 
 if [ ${T100_RESULT} -ne 0 ] || [ ${FAIL} -gt 0 ] || [ ${RUNTIME_RESULT} -ne 0 ]; then
     echo ""
     echo "[FAIL] Contrato de scrollbar NÃO satisfeito"
-    echo "       — gap(system)=0 e altura do input_ta devem existir em src/main.c"
+    echo "       — gap(system)=0, altura do input_ta e 's_messages_cont único"
+    echo "         scrollable(true)' devem existir em src/main.c"
     exit 1
 fi
 exit 0

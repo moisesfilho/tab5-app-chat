@@ -70,8 +70,8 @@ require(any(re.search(r"s_modal\s*,\s*TAB5_UI_PCT\(\s*100\s*\)\s*,\s*TAB5_UI_PCT
         "apply_modal_layout: modal = PCT(100) x PCT(100) (layout relativo)")
 require(any(re.search(r"backdrop\s*,\s*TAB5_UI_PCT\(\s*100\s*\)\s*,\s*TAB5_UI_PCT\(\s*100\s*\)", c) for c in sizes_modal),
         "apply_modal_layout: backdrop = PCT(100) x PCT(100) (layout relativo)")
-require(any(re.search(r"card\s*,\s*TAB5_UI_PCT\(\s*96\s*\)\s*,\s*TAB5_UI_PCT\(\s*60\s*\)", c) for c in sizes_modal),
-        "apply_modal_layout: card = PCT(96) x PCT(60) (layout relativo)")
+require(any(re.search(r"card\s*,\s*TAB5_UI_PCT\(\s*96\s*\)\s*,\s*TAB5_UI_SIZE_CONTENT\s*\)", c) for c in sizes_modal),
+        "apply_modal_layout: card = PCT(96) x SIZE_CONTENT (auto-height — grade 2x2, nada rola)")
 require(any(re.search(r"card\s*,\s*TAB5_UI_ALIGN_CENTER\s*,\s*0\s*,\s*-\s*\(\s*kb_h\s*/\s*2\s*\)", c) for c in align_modal),
         "apply_modal_layout: card CENTER com offset -(kb_h/2)")
 require("tab5_ui_get_display_size" not in modal,

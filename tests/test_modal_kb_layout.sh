@@ -5,10 +5,12 @@
 # Verifies:
 #  1. Modal e backdrop = TAB5_UI_PCT(100) x TAB5_UI_PCT(100) (tela visual real,
 #     independente do w/h reportado pelo host)
-#  2. Card = TAB5_UI_PCT(96) x TAB5_UI_PCT(60), CENTER offset -(kb_h/2)
+#  2. Card = TAB5_UI_PCT(96) x TAB5_UI_SIZE_CONTENT (altura automática, sem
+#     PCT(60)/card_h), CENTER offset -(kb_h/2)
 #  3. Nenhuma dimensão absoluta (w/h/card_h/usable_h) no caminho modal
 #  4. Tamanhos PCT idênticos em retrato e paisagem (sem cálculo manual)
-#  5. Conteúdo dos campos permanece acessível (card scrollable)
+#  5. Conteúdo cabe com o teclado aberto em retrato/paisagem (grade compacta
+#     2x2 — nada rola)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -86,7 +88,7 @@ static void apply_modal_layout(void) {
     tab5_ui_obj_set_align(obj_modal, TAB5_UI_ALIGN_TOP_LEFT, 0, 0);
     tab5_ui_obj_set_size(obj_backdrop, TAB5_UI_PCT(100), TAB5_UI_PCT(100));
     tab5_ui_obj_set_align(obj_backdrop, TAB5_UI_ALIGN_TOP_LEFT, 0, 0);
-    tab5_ui_obj_set_size(obj_card, TAB5_UI_PCT(96), TAB5_UI_PCT(60));
+    tab5_ui_obj_set_size(obj_card, TAB5_UI_PCT(96), TAB5_UI_SIZE_CONTENT);
     tab5_ui_obj_set_align(obj_card, TAB5_UI_ALIGN_CENTER, 0, -(kb_h / 2));
 }
 
@@ -103,7 +105,7 @@ static void open_config_modal(void) {
     tab5_ui_obj_set_align(obj_backdrop, TAB5_UI_ALIGN_TOP_LEFT, 0, 0);
 
     obj_card = mock_create(obj_modal);
-    tab5_ui_obj_set_size(obj_card, TAB5_UI_PCT(96), TAB5_UI_PCT(60));
+    tab5_ui_obj_set_size(obj_card, TAB5_UI_PCT(96), TAB5_UI_SIZE_CONTENT);
     tab5_ui_obj_set_align(obj_card, TAB5_UI_ALIGN_CENTER, 0, 0);
 
     apply_modal_layout();
@@ -138,6 +140,15 @@ static void check(int c, const char *m) {
 int main(void) {
     printf("=== Modal + Keyboard Layout Test — Contrato relativo ===\n\n");
 
+    /* Estimativas de conteúdo do card (âncora da validação de "cabe"):
+     *   compacto 2x2:  pads(32) + título(20) + gaps do card(2x10) +
+     *                  grade 2x2(2x[20+4+42] + 10) + btns(48) = 262px
+*   coluna única (antigo): pads(32) + título(20) + corpo(4x[20+4+42] +
+     *                  3 gaps) + btns(48) ≈ 414px — NÃO cabe em paisagem.
+     */
+    const int CARD_CONTENT_H = 262;
+    const int SINGLE_COLUMN_H = 414;
+
     /* Encoding real do SDK */
     check(TAB5_UI_PCT(100) == -1100, "TAB5_UI_PCT(100) == -1100");
     check(TAB5_UI_PCT(96)  == -1096, "TAB5_UI_PCT(96) == -1096");
@@ -155,7 +166,7 @@ int main(void) {
         check(find_set_size(obj_backdrop, &bw, &bh), "backdrop: sized");
         check(bw == -1100 && bh == -1100, "backdrop: PCT(100) x PCT(100)");
         check(find_set_size(obj_card, &cw, &ch), "card: sized");
-        check(cw == -1096 && ch == -1060, "card: PCT(96) x PCT(60)");
+        check(cw == -1096 && ch == -1, "card: PCT(96) x SIZE_CONTENT (auto-height)");
         int a, oy;
         check(find_set_align(obj_card, &a, &oy), "card: aligned");
         check(a == TAB5_UI_ALIGN_CENTER && oy == 0, "card: CENTER offset 0 (kb_h=0)");
@@ -177,12 +188,12 @@ int main(void) {
         find_set_size(obj_card, &cw, &ch);
         check(mw == -1100 && mh == -1100, "modal+kb: PCT(100) x PCT(100) (não usa h)");
         check(bw == -1100 && bh == -1100, "backdrop+kb: PCT(100) x PCT(100) (não usa h)");
-        check(cw == -1096 && ch == -1060, "card+kb: PCT(96) x PCT(60) (sem card_h)");
+        check(cw == -1096 && ch == -1, "card+kb: PCT(96) x SIZE_CONTENT (sem card_h)");
         int a, oy;
         check(find_set_align(obj_card, &a, &oy), "card+kb: aligned");
         check(a == TAB5_UI_ALIGN_CENTER && oy == -200, "card+kb: CENTER offset -(400/2) = -200");
-        check(pctpx(1280, 60) == 768, "card+kb: altura resolvida 768 (60% do visual)");
-        check(pctpx(1280, 60) >= 384, "card+kb: card comporta os campos (~384px)");
+        check(pctpx(1280, 100) - 400 >= CARD_CONTENT_H,
+              "card+kb: visível 880px >= conteúdo compacto (~262px) — nada rola");
         printf("  card: %dx%d offset=%d\n\n", cw, ch, oy);
     }
 
@@ -194,7 +205,7 @@ int main(void) {
         open_config_modal();
         int cw, ch;
         find_set_size(obj_card, &cw, &ch);
-        check(cw == -1096 && ch == -1060, "large_kb: card permanece PCT(96) x PCT(60)");
+        check(cw == -1096 && ch == -1, "large_kb: card permanece PCT(96) x SIZE_CONTENT");
         int a, oy;
         check(find_set_align(obj_card, &a, &oy), "large_kb: card aligned");
         check(oy == -(900 / 2), "large_kb: offset -(kb_h/2) = -450 (teclado preservado)");
@@ -213,9 +224,9 @@ int main(void) {
         find_set_size(obj_card, &cw, &ch);
         check(mw == -1100 && mh == -1100, "landscape+kb: modal PCT(100) x PCT(100) (visual)");
         check(bw == -1100 && bh == -1100, "landscape+kb: backdrop PCT(100) x PCT(100)");
-        check(cw == -1096 && ch == -1060, "landscape+kb: card PCT(96) x PCT(60)");
-        check(pctpx(1280, 96) == 1229 && pctpx(720, 60) == 432,
-              "landscape+kb: card resolvido 1229x432 (visual 1280x720)");
+        check(cw == -1096 && ch == -1, "landscape+kb: card PCT(96) x SIZE_CONTENT");
+        check(pctpx(1280, 96) == 1229,
+              "landscape+kb: card largura resolvida 1229 (96% do visual 1280)");
         int a, oy;
         check(find_set_align(obj_card, &a, &oy), "landscape+kb: card aligned");
         check(oy == -150, "landscape+kb: CENTER offset -(300/2) = -150");
@@ -232,35 +243,54 @@ int main(void) {
         open_config_modal();
         int cw, ch, a, oy;
         find_set_size(obj_card, &cw, &ch);
-        check(cw == -1096 && ch == -1060, "landscape: card PCT(96) x PCT(60)");
+        check(cw == -1096 && ch == -1, "landscape: card PCT(96) x SIZE_CONTENT");
         check(find_set_align(obj_card, &a, &oy), "landscape: card aligned");
         check(oy == 0, "landscape: CENTER offset 0 (sem teclado)");
         printf("  card: %dx%d offset=%d\n\n", cw, ch, oy);
     }
 
-    /* ─── Scenario 6: Field fit (card relativo + scroll) ─── */
-    printf("Scenario 6: Fields fit in the relative card (PCT(60))\n");
+    /* ─── Scenario 6: Content fits with keyboard (compact 2x2) ─── */
+    printf("Scenario 6: Content fits with keyboard — portrait & landscape\n");
     {
-        /* Conteúdo interno estimado ~384px (labels+textareas+botões+gaps). */
-        int estimated_content_h = 384;
-
+        /* Retrato: visível 1280-400 = 880px — folga folgada, nada rola. */
         mock_w = 720; mock_h = 1280; mock_kb_h = 400;
         s_modal_open = false; reset();
         open_config_modal();
         int cw, ch;
-        check(find_set_size(obj_card, &cw, &ch) && cw == -1096 && ch == -1060,
-              "portrait+kb: card PCT(96) x PCT(60)");
-        check(pctpx(1280, 60) >= estimated_content_h,
-              "portrait+kb: card 768px acomoda todos os campos");
+        check(find_set_size(obj_card, &cw, &ch) && cw == -1096 && ch == -1,
+              "portrait+kb: card PCT(96) x SIZE_CONTENT");
+        check(mock_h - mock_kb_h >= CARD_CONTENT_H,
+              "portrait+kb: visível 880px >= 262px (conteúdo compacto inteiro)");
 
-        mock_w = 1280; mock_h = 720; mock_kb_h = 200;
+        /* Paisagem com teclado 400: visível 720-400 = 320px. */
+        mock_w = 1280; mock_h = 720; mock_kb_h = 400;
         s_modal_open = false; reset();
         open_config_modal();
         find_set_size(obj_card, &cw, &ch);
-        check(pctpx(720, 60) >= estimated_content_h,
-              "landscape+kb: card 432px acomoda os campos (scroll se necessário)");
-        printf("  portrait card=%dpx, landscape card=%dpx\n\n",
-               pctpx(1280, 60), pctpx(720, 60));
+        check(mock_h - mock_kb_h >= CARD_CONTENT_H,
+              "landscape+kb(400): visível 320px >= 262px — cabe na grade 2x2");
+        check(mock_h - mock_kb_h < SINGLE_COLUMN_H,
+              "landscape+kb(400): 320px < 414px — prova que coluna única NÃO caberia (2x2 obrigatória)");
+
+        /* Paisagem com teclado 300: visível 420px — folga confortável. */
+        mock_w = 1280; mock_h = 720; mock_kb_h = 300;
+        s_modal_open = false; reset();
+        open_config_modal();
+        find_set_size(obj_card, &cw, &ch);
+        check(mock_h - mock_kb_h >= CARD_CONTENT_H,
+              "landscape+kb(300): visível 420px >= 262px");
+
+        /* Caso extremo documentado (teclado 550 em paisagem): visível 170px <
+         * 262px — contrato aceita clipping; sem scroll como solução. */
+        mock_w = 1280; mock_h = 720; mock_kb_h = 550;
+        s_modal_open = false; reset();
+        open_config_modal();
+        find_set_size(obj_card, &cw, &ch);
+        check(mock_h - mock_kb_h < CARD_CONTENT_H,
+              "landscape+kb(550): 170px < 262px (extremo documentado, sem scroll)");
+
+        printf("  compact content=%dpx, single-column=%dpx\n\n",
+               CARD_CONTENT_H, SINGLE_COLUMN_H);
     }
 
     printf("=== Modal+KB Results: %s (failures=%d) ===\n",

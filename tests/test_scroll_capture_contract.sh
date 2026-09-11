@@ -13,8 +13,12 @@
 #   1. build_bubble: row, spacer(s) e bubble  → set_scrollable(X, false)
 #   2. build_chat_ui: s_input_cont e s_input_ta → set_scrollable(X, false)
 #   3. Preservados: scr → set_scrollable(scr, false);
-#      s_messages_cont → set_scrollable(..., true);
-#      s_modal_card → set_scrollable(..., true);
+#      s_messages_cont → set_scrollable(..., true) — o ÚNICO scrollable(true)
+#      do arquivo; modal de configuração → NENHUM objeto é rolável:
+#      s_modal/s_modal_backdrop/s_modal_card/cfg_body (agora false) → false,
+#      btns → false e os 4 campos de configuração
+#      (s_cfg_url/s_cfg_token/s_cfg_model/s_cfg_max_tokens) → false
+#      (plano aprovado de modal compacto 2x2 com card de altura automática);
 #      tab5_ui_obj_scroll_to_bottom(s_messages_cont, true) em rebuild_messages.
 #
 # Além da captura de scroll, o runtime TEST-003 registra o gap do row por papel
@@ -25,12 +29,12 @@
 #
 # TEST-001 (grep): padrões set_scrollable(false) nos alvos de correção
 #   (row/spacer(s)/bubble em build_bubble; s_input_cont/s_input_ta em build_chat_ui)
-#   e preservação de scr=false, messages_cont=true, modal_card=true,
-#   scroll_to_bottom(messages_cont, true).
+#   e preservação de scr=false, messages_cont=true, scroll_to_bottom).
 # TEST-002 (extração Python dos corpos REAIS): build_bubble/build_chat_ui contêm
 #   os set_scrollable(false) acima; build_chat_ui contém scr=false e
-#   messages_cont=true; open_config_modal contém modal_card=true; rebuild_messages
-#   contém scroll_to_bottom(messages_cont, true).
+#   messages_cont=true; open_config_modal contém cfg_body=false (nada no modal
+#   é rolável) e s_modal_card=false; rebuild_messages contém
+#   scroll_to_bottom(messages_cont, true).
 # TEST-003 (runtime C instrumentado): réplica do layout-ALVO registrando
 #   alvos/valores das chamadas set_scrollable/scroll_to_bottom.
 #
@@ -120,12 +124,40 @@ else
     run_test "lista de mensagens scrollável preservada (s_messages_cont, true)" "FAIL"
 fi
 
-# A8. Card do modal continua scrollável
-if grep -qP 'tab5_ui_obj_set_scrollable\(\s*s_modal_card\s*,\s*true\s*\)' "${SRC}"; then
-    run_test "card do modal scrollável preservado (s_modal_card, true)" "PASS"
+# A8. Card do modal não é rolável (nenhum objeto do modal é rolável)
+if grep -qP 'tab5_ui_obj_set_scrollable\(\s*s_modal_card\s*,\s*false\s*\)' "${SRC}"; then
+    run_test "card do modal NÃO é rolável (s_modal_card, false)" "PASS"
 else
-    run_test "card do modal scrollável preservado (s_modal_card, true)" "FAIL"
+    run_test "card do modal NÃO é rolável (s_modal_card, false)" "FAIL"
 fi
+
+# A8b. Corpo de campos do modal agora NÃO é rolável (plano compacto 2x2)
+if grep -qP 'tab5_ui_obj_set_scrollable\(\s*cfg_body\s*,\s*false\s*\)' "${SRC}"; then
+    run_test "corpo de campos NÃO é rolável (cfg_body, false)" "PASS"
+else
+    run_test "corpo de campos NÃO é rolável (cfg_body, false)" "FAIL"
+fi
+
+# A8c. Modal e backdrop não roláveis (não capturam gestos fora do card)
+if grep -qP 'tab5_ui_obj_set_scrollable\(\s*s_modal\s*,\s*false\s*\)' "${SRC}"; then
+    run_test "modal NÃO é rolável (s_modal, false)" "PASS"
+else
+    run_test "modal NÃO é rolável (s_modal, false)" "FAIL"
+fi
+if grep -qP 'tab5_ui_obj_set_scrollable\(\s*s_modal_backdrop\s*,\s*false\s*\)' "${SRC}"; then
+    run_test "backdrop NÃO é rolável (s_modal_backdrop, false)" "PASS"
+else
+    run_test "backdrop NÃO é rolável (s_modal_backdrop, false)" "FAIL"
+fi
+
+# A8d. Os 4 campos de configuração não roláveis (textareas com altura fixa 42)
+for cfg_field in s_cfg_url s_cfg_token s_cfg_model s_cfg_max_tokens; do
+    if grep -qP "tab5_ui_obj_set_scrollable\(\s*${cfg_field}\s*,\s*false\s*\)" "${SRC}"; then
+        run_test "campo ${cfg_field} NÃO é rolável (set_scrollable(false))" "PASS"
+    else
+        run_test "campo ${cfg_field} NÃO é rolável (set_scrollable(false))" "FAIL"
+    fi
+done
 
 # A9. Auto scroll-to-bottom preservado no rebuild
 if grep -qP 'tab5_ui_obj_scroll_to_bottom\(\s*s_messages_cont\s*,\s*true\s*\)' "${SRC}"; then
@@ -208,6 +240,8 @@ require(re.search(r"tab5_ui_obj_set_scrollable\(\s*scr\s*,\s*false\s*\)", chat) 
         "build_chat_ui REAL contém set_scrollable(scr, false) (screen preservada)")
 require(re.search(r"tab5_ui_obj_set_scrollable\(\s*s_messages_cont\s*,\s*true\s*\)", chat) is not None,
         "build_chat_ui REAL contém set_scrollable(s_messages_cont, true) (lista preservada)")
+require(re.search(r"tab5_ui_obj_set_scrollable\(\s*s_modal\s*,\s*false\s*\)", chat) is not None,
+        "build_chat_ui REAL contém set_scrollable(s_modal, false) (modal não rola)")
 require(sc_call(r"s_input_cont").search(chat) is not None,
         "build_chat_ui REAL contém set_scrollable(s_input_cont, false)")
 require(sc_call(r"s_input_ta").search(chat) is not None,
@@ -215,8 +249,17 @@ require(sc_call(r"s_input_ta").search(chat) is not None,
 print()
 
 print("--- TEST-002: corpos REAIS — modal e rebuild preservados ---")
-require(re.search(r"tab5_ui_obj_set_scrollable\(\s*s_modal_card\s*,\s*true\s*\)", modal) is not None,
-        "open_config_modal REAL contém set_scrollable(s_modal_card, true) (scroll interno preservado)")
+require(re.search(r"tab5_ui_obj_set_scrollable\(\s*cfg_body\s*,\s*false\s*\)", modal) is not None,
+        "open_config_modal REAL contém set_scrollable(cfg_body, false) (nada no modal é rolável)")
+require(re.search(r"tab5_ui_obj_set_scrollable\(\s*s_modal_card\s*,\s*false\s*\)", modal) is not None,
+        "open_config_modal REAL contém set_scrollable(s_modal_card, false) (card não rola)")
+require(re.search(r'tab5_ui_obj_set_scrollable\(\s*\w+\s*,\s*true\s*\)', modal) is None,
+        "open_config_modal REAL NÃO contém NENHUM set_scrollable(..., true) (modal 100% não rolável)")
+require(sc_call(r"s_modal_backdrop").search(modal) is not None,
+        "open_config_modal REAL contém set_scrollable(s_modal_backdrop, false)")
+for cfg in ("s_cfg_url", "s_cfg_token", "s_cfg_model", "s_cfg_max_tokens"):
+    require(sc_call(cfg).search(modal) is not None,
+            f"open_config_modal REAL contém set_scrollable({cfg}, false) (campo com altura fixa)")
 require(re.search(r"tab5_ui_obj_scroll_to_bottom\(\s*s_messages_cont\s*,\s*true\s*\)", rebuild) is not None,
         "rebuild_messages REAL contém scroll_to_bottom(s_messages_cont, true) (auto-bottom preservado)")
 print()
@@ -302,11 +345,19 @@ static void tgt_build_chat_ui(void) {
     SC("s_messages_cont", true); /* lista de mensagens SCROLLÁVEL (preservada) */
     SC("s_input_cont", false);   /* contêiner do input nunca captura swipe */
     SC("s_input_ta", false);     /* textarea do input é linha única (INPUT_H=60) */
+    SC("s_modal", false);        /* modal não rola (não captura gestos no card) */
 }
 
-/* ── Réplica do modal e do rebuild ALVO (preservação) ── */
+/* ── Réplica do modal e do rebuild ALVO (nenhum objeto do modal é rolável) ── */
 static void tgt_open_config_modal(void) {
-    SC("s_modal_card", true);    /* card do modal mantém scroll interno */
+    SC("cfg_body", false);     /* corpo de campos NÃO é rolável (compacto 2x2) */
+    SC("s_modal_card", false); /* card não rola (altura automática) */
+    SC("btns", false);         /* linha de botões: fixa, não rolável */
+    SC("s_modal_backdrop", false); /* backdrop cobre a tela, sem capturar swipe */
+    SC("s_cfg_url", false);        /* campo Base URL: altura fixa 42, sem scroll */
+    SC("s_cfg_token", false);      /* campo Token: altura fixa 42, sem scroll */
+    SC("s_cfg_model", false);      /* campo Modelo: altura fixa 42, sem scroll */
+    SC("s_cfg_max_tokens", false); /* campo Max tokens: altura fixa 42, sem scroll */
 }
 static void tgt_rebuild_messages(void) {
     STB("s_messages_cont", true);/* após rebuild, volta ao fim da lista */
@@ -370,12 +421,19 @@ int main(void) {
     check(has_sc("s_messages_cont", 1),"build_chat_ui: s_messages_cont -> set_scrollable(true) (preservado)");
     check(has_sc("s_input_cont", 0),   "build_chat_ui: s_input_cont -> set_scrollable(false)");
     check(has_sc("s_input_ta", 0),     "build_chat_ui: s_input_ta -> set_scrollable(false)");
+    check(has_sc("s_modal", 0),        "build_chat_ui: s_modal -> set_scrollable(false)");
     printf("  chat_ui: captures=%d\n\n", sc_count);
 
-    /* C4: modal e rebuild preservados */
+    /* C4: modal e rebuild preservados (nada do modal é rolável) */
     reset_calls();
     tgt_open_config_modal();
-    check(has_sc("s_modal_card", 1),   "modal: s_modal_card -> set_scrollable(true) (scroll interno preservado)");
+    check(has_sc("cfg_body", 0), "modal: cfg_body -> set_scrollable(false) (nada rolável no modal)");
+    check(has_sc("s_modal_card", 0),"modal: s_modal_card -> set_scrollable(false) (card não rola)");
+    check(has_sc("btns", 0),       "modal: btns -> set_scrollable(false) (linha de botões fixa)");
+    check(has_sc("s_modal_backdrop", 0), "modal: s_modal_backdrop -> set_scrollable(false)");
+    check(has_sc("s_cfg_url", 0) && has_sc("s_cfg_token", 0) &&
+          has_sc("s_cfg_model", 0) && has_sc("s_cfg_max_tokens", 0),
+          "modal: 4 campos s_cfg_* -> set_scrollable(false)");
     printf("  modal: captures=%d\n\n", sc_count);
 
     reset_calls();
@@ -383,13 +441,19 @@ int main(void) {
     check(has_stb("s_messages_cont", 1),"build: scroll_to_bottom(s_messages_cont, true) preservado");
     printf("  rebuild: captures=%d\n\n", sc_count);
 
-    /* C5: nenhum alvo de balão/input registrado como true */
+    /* C5: nenhum alvo de balão/input/modal registrado como true — somente
+     * s_messages_cont (o único set_scrollable(true) do arquivo). */
     reset_calls();
     tgt_build_bubble("system");
     tgt_build_chat_ui();
+    tgt_open_config_modal();
     check(!has_sc("row", 1) && !has_sc("spacer", 1) && !has_sc("second_spacer", 1) &&
-          !has_sc("bubble", 1) && !has_sc("s_input_cont", 1) && !has_sc("s_input_ta", 1),
-          "NENHUM balão/input com set_scrollable(true)");
+          !has_sc("bubble", 1) && !has_sc("s_input_cont", 1) && !has_sc("s_input_ta", 1) &&
+          !has_sc("s_modal", 1) && !has_sc("s_modal_backdrop", 1) &&
+          !has_sc("s_modal_card", 1) && !has_sc("btns", 1) && !has_sc("cfg_body", 1) &&
+          !has_sc("s_cfg_url", 1) && !has_sc("s_cfg_token", 1) &&
+          !has_sc("s_cfg_model", 1) && !has_sc("s_cfg_max_tokens", 1),
+          "NENHUM balão/input/modal com set_scrollable(true) — só s_messages_cont");
 
     /* C6: REQ-002 — gap do row por papel (system sem gap) */
     reset_calls();

@@ -5,7 +5,8 @@
 # (não replica a implementação) e exige o contrato relativo:
 #   1. modal/backdrop = TAB5_UI_PCT(100) x TAB5_UI_PCT(100) (tela visual real,
 #      independente do w/h reportado pelo host).
-#   2. card = TAB5_UI_PCT(96) x TAB5_UI_PCT(60).
+#   2. card = TAB5_UI_PCT(96) x TAB5_UI_SIZE_CONTENT (altura automática —
+#      grade compacta 2x2 garante que o conteúdo caiba com teclado; nada rola).
 #   3. card alinhado TAB5_UI_ALIGN_CENTER com offset -(kb_h/2) (sobe o card
 #      quando o teclado aparece).
 #   4. AUSÊNCIA de tab5_ui_get_display_size / h / usable_h / card_h no caminho
@@ -67,7 +68,8 @@ def require(condition, message):
 
 def modal_size_absolute_dims(body):
     """Retorna dimensões absolutas (w/h/literal) usadas em set_size de
-    modal/backdrop/card — violam o contrato 100% relativo."""
+    modal/backdrop/card — violam o contrato 100% relativo. São válidos apenas
+    TAB5_UI_PCT(...) (relativo ao pai) e TAB5_UI_SIZE_CONTENT (auto-height)."""
     bad = []
     for c in calls(body, "size"):
         parts = [p.strip() for p in c.split(",")]
@@ -77,7 +79,7 @@ def modal_size_absolute_dims(body):
         if not re.fullmatch(r"(?:s_modal|s_modal_backdrop|backdrop|card|s_modal_card)", obj):
             continue
         for label, arg in (("w", parts[1]), ("h", parts[2])):
-            if not re.fullmatch(r"TAB5_UI_PCT\(\s*\d+\s*\)", arg):
+            if not re.fullmatch(r"(?:TAB5_UI_PCT\(\s*\d+\s*\)|TAB5_UI_SIZE_CONTENT)", arg):
                 bad.append(f"{obj} {label}={arg}")
     return bad
 
@@ -96,10 +98,10 @@ for tag, sizes in (("open_config_modal", sizes_open), ("apply_modal_layout", siz
     require(any(re.search(r"(?:backdrop|s_modal_backdrop)\s*,\s*TAB5_UI_PCT\(\s*100\s*\)\s*,\s*TAB5_UI_PCT\(\s*100\s*\)", c) for c in sizes),
             f"{tag}: backdrop = TAB5_UI_PCT(100) x TAB5_UI_PCT(100)")
 
-# Card: PCT(96) x PCT(60).
+# Card: PCT(96) x SIZE_CONTENT (auto-height).
 for tag, sizes in (("open_config_modal", sizes_open), ("apply_modal_layout", sizes_apply)):
-    require(any(re.search(r"(?:card|s_modal_card)\s*,\s*TAB5_UI_PCT\(\s*96\s*\)\s*,\s*TAB5_UI_PCT\(\s*60\s*\)", c) for c in sizes),
-            f"{tag}: card = TAB5_UI_PCT(96) x TAB5_UI_PCT(60)")
+    require(any(re.search(r"(?:card|s_modal_card)\s*,\s*TAB5_UI_PCT\(\s*96\s*\)\s*,\s*TAB5_UI_SIZE_CONTENT\s*\)", c) for c in sizes),
+            f"{tag}: card = TAB5_UI_PCT(96) x TAB5_UI_SIZE_CONTENT (auto-height)")
 
 # Card CENTER; offset centrado -(kb_h/2) no apply (que conhece o teclado).
 require(any(re.search(r"(?:card|s_modal_card)\s*,\s*TAB5_UI_ALIGN_CENTER\b", c) for c in align_open),
@@ -143,8 +145,10 @@ require(pct(60) == -1060,  "encoding real: TAB5_UI_PCT(60) == -1060")
 pw, ph = 720, 1280
 require(round(pw * 1.00) == 720 and round(ph * 1.00) == 1280,
         "retrato: modal 100% ocupa 720x1280")
-require(round(pw * 0.96) == 691 and round(ph * 0.60) == 768,
-        "retrato: card 96%x60% ocupa 691x768")
+require(round(pw * 0.96) == 691,
+        "retrato: card largura 96% ocupa 691px (altura SIZE_CONTENT/auto)")
+require(1280 - 400 >= 262,
+        "retrato+kb(400): visível 880px >= conteúdo compacto 262px — nada rola")
 require(-(200 // 2) == -100,
         "retrato: offset centrado -(kb_h/2) = -100 para kb_h=200")
 
@@ -153,17 +157,19 @@ require(-(200 // 2) == -100,
 lw, lh = 1280, 720
 require(round(lw * 1.00) == 1280 and round(lh * 1.00) == 720,
         "landscape stale 720x1280: modal 100% ocupa 1280x720 (visual, não 720x1280)")
-require(round(lw * 0.96) == 1229 and round(lh * 0.60) == 432,
-        "landscape stale: card 96%x60% ocupa 1229x432 (visual)")
+require(round(lw * 0.96) == 1229,
+        "landscape stale: card largura 96% ocupa 1229px (altura SIZE_CONTENT/auto)")
+require(720 - 400 >= 262,
+        "landscape stale+kb(400): visível 320px >= conteúdo compacto 262px — grade 2x2 cabe")
 require(round(lh * 1.00) <= 1280,
         "landscape stale: altura visual 720 <= host 1280 — PCT não vaza h do host")
-require(pct(100) == -1100 and pct(96) == -1096 and pct(60) == -1060,
+require(pct(100) == -1100 and pct(96) == -1096,
         "landscape stale: mesmo encoding PCT em qualquer orientação (sem dimensão absoluta no código)")
 
 print()
 print(f"=== Modal relative contract (estática): {'ALL PASSED' if failures == 0 else str(failures) + ' FAIL(s)'} ===")
-print("    (contrato verificado: PCT(100) x PCT(100), card relativo e")
-print("     TOP_LEFT preservado para modal/backdrop)")
+print("    (contrato verificado: PCT(100) x PCT(100), card PCT(96) x SIZE_CONTENT")
+print("     auto-height e TOP_LEFT preservado para modal/backdrop)")
 sys.exit(1 if failures else 0)
 PY
 STATIC_RESULT=$?
@@ -196,7 +202,6 @@ int main(void) {
     /* Encoding */
     check(TAB5_UI_PCT(100) == -1100, "PCT(100) == -1100");
     check(TAB5_UI_PCT(96)  == -1096, "PCT(96) == -1096");
-    check(TAB5_UI_PCT(60)  == -1060, "PCT(60) == -1060");
 
     /* Retrato 720x1280, kb_h=200 */
     printf("\nCenário retrato: visual 720x1280, kb_h=200\n");
@@ -205,9 +210,9 @@ int main(void) {
         check(pctpx(w, 100) == 720 && pctpx(h, 100) == 1280,
               "modal 100% = 720x1280");
         check(pctpx(w, 96) == 691, "card width = 96% de 720 = 691");
-        check(pctpx(h, 60) == 768, "card height = 60% de 1280 = 768");
         check(-(kb_h / 2) == -100, "card CENTER offset = -(200/2) = -100");
-        printf("  card=%dx%d, offset=%d\n\n", pctpx(w, 96), pctpx(h, 60), -(kb_h / 2));
+        check(1280 - 400 >= 262, "retrato+kb(400): visível 880px >= 262px (2x2 cabe)");
+        printf("  card=691xauto, offset=%d\n\n", -(kb_h / 2));
     }
 
     /* Landscape com host stale 720x1280, visual 1280x720, kb_h=200 */
@@ -215,15 +220,17 @@ int main(void) {
     {
         int visual_w = 1280, visual_h = 720, host_h = 1280, kb_h = 200;
         int mw = pctpx(visual_w, 100), mh = pctpx(visual_h, 100);
-        int cw = pctpx(visual_w, 96),  ch = pctpx(visual_h, 60);
+        int cw = pctpx(visual_w, 96);
         check(mw == 1280 && mh == 720, "modal 100% = 1280x720 (visual)");
         check(mh != host_h, "modal altura (720) difere do host stale (1280) — PCT não usa h");
-        check(cw == 1229 && ch == 432, "card 96%x60% = 1229x432 (visual)");
+        check(cw == 1229, "card width 96% = 1229px (visual; altura SIZE_CONTENT/auto)");
+        check(720 - 400 >= 262,
+              "landscape stale+kb(400): visível 320px >= 262px — grade 2x2 cabe");
         check(mh + (kb_h / 2) <= host_h,
               "paisagem stale: card + offset cabe; nenhuma dimensão absoluta do host");
         check(-(kb_h / 2) == -100, "card CENTER offset = -(200/2) = -100 (idêntico ao retrato)");
-        printf("  modal=%dx%d, card=%dx%d, offset=%d (host stale: %dx%d)\n\n",
-               mw, mh, cw, ch, -(kb_h / 2), 720, host_h);
+        printf("  modal=%dx%d, card=%dxauto, offset=%d (host stale: %dx%d)\n\n",
+               mw, mh, cw, -(kb_h / 2), 720, host_h);
     }
 
     /* kb_h=0 => offset zero; porta nunca depende de w/h absoluto */
@@ -231,7 +238,7 @@ int main(void) {
     {
         check(-(0 / 2) == 0, "kb_h=0 -> offset 0");
         check(TAB5_UI_PCT(100) == -1100, "PCT(100) idêntico em retrato e paisagem");
-        check(TAB5_UI_PCT(60) == -1060, "PCT(60) idêntico em retrato e paisagem");
+        check(TAB5_UI_PCT(96) == -1096, "PCT(96) idêntico em retrato e paisagem");
         printf("\n");
     }
 

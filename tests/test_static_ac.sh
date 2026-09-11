@@ -204,11 +204,11 @@ else
     run_test "card width = TAB5_UI_PCT(96)" "FAIL"
 fi
 
-# Check that card height is relative (PCT(60)) — sem card_h/usable_h
-if grep -qP 'set_size\(\s*(?:s_modal_card|card)\s*,\s*TAB5_UI_PCT\(\s*96\s*\),\s*TAB5_UI_PCT\(\s*60\s*\)' "${SRC}"; then
-    run_test "card height = TAB5_UI_PCT(60) (relativo, sem card_h)" "PASS"
+# Check that card height wraps content (TAB5_UI_SIZE_CONTENT) — sem card_h/usable_h
+if grep -qP 'set_size\(\s*(?:s_modal_card|card)\s*,\s*TAB5_UI_PCT\(\s*96\s*\),\s*TAB5_UI_SIZE_CONTENT\s*\)' "${SRC}"; then
+    run_test "card altura = TAB5_UI_SIZE_CONTENT (auto-height, sem card_h)" "PASS"
 else
-    run_test "card height = TAB5_UI_PCT(60) (relativo, sem card_h)" "FAIL"
+    run_test "card altura = TAB5_UI_SIZE_CONTENT (auto-height, sem card_h)" "FAIL"
 fi
 
 # Check that card is centered with negative kb offset (sobe acima do teclado)
@@ -221,14 +221,14 @@ fi
 echo ""
 
 # --- AC-007: Modal fields and buttons within usable area ---
-echo "AC-007: Modal fields/buttons na área útil (card relativo + scroll)"
+echo "AC-007: Modal fields/buttons na área útil (card auto-height, nenhum scroll)"
 
-# Contrato relativo: card é PCT(96) x PCT(60) com CENTER offset -(kb_h/2);
+# Contrato relativo: card é PCT(96) x SIZE_CONTENT com CENTER offset -(kb_h/2);
 # o caminho modal NÃO deriva card_h/usable_h de dimensões absolutas do host.
 if grep -qP 'card_h\s*=' "${SRC}"; then
-    run_test "SEM card_h no caminho modal (altura relativa PCT(60))" "FAIL"
+    run_test "SEM card_h no caminho modal (altura automática SIZE_CONTENT)" "FAIL"
 else
-    run_test "SEM card_h no caminho modal (altura relativa PCT(60))" "PASS"
+    run_test "SEM card_h no caminho modal (altura automática SIZE_CONTENT)" "PASS"
 fi
 
 if grep -qP '\busable_h\b' "${SRC}"; then
@@ -237,12 +237,42 @@ else
     run_test "SEM usable_h no caminho modal (sem derivar h - kb_h)" "PASS"
 fi
 
-# Conteúdo maior que a área visível permanece acessível via scroll no card
-if grep -qP 'tab5_ui_obj_set_scrollable\(\s*s_modal_card\s*,\s*true' "${SRC}"; then
-    run_test "card scrollable = true (campos/botões rolam no vão do teclado)" "PASS"
+# Conteúdo cabe com teclado aberto em retrato/paisagem: NADA no modal rola
+# (plano compacto 2x2, card de altura automática). cfg_body agora é
+# set_scrollable(false); o único scrollable(true) do arquivo é s_messages_cont.
+if grep -qP 'tab5_ui_obj_set_scrollable\(\s*cfg_body\s*,\s*false' "${SRC}"; then
+    run_test "cfg_body scrollable = false (nada no modal é rolável)" "PASS"
 else
-    run_test "card scrollable = true (campos/botões rolam no vão do teclado)" "FAIL"
+    run_test "cfg_body scrollable = false (nada no modal é rolável)" "FAIL"
 fi
+
+if grep -qP 'tab5_ui_obj_set_scrollable\(\s*s_modal_card\s*,\s*false' "${SRC}"; then
+    run_test "s_modal_card scrollable = false (card não rola)" "PASS"
+else
+    run_test "s_modal_card scrollable = false (card não rola)" "FAIL"
+fi
+
+# Modal/backdrop e campos não roláveis: modal e backdrop não capturam gestos e
+# os campos têm altura fixa 42 dentro das células PCT(50) da grade 2x2.
+if grep -qP 'tab5_ui_obj_set_scrollable\(\s*s_modal\s*,\s*false' "${SRC}"; then
+    run_test "s_modal scrollable = false (modal não rola)" "PASS"
+else
+    run_test "s_modal scrollable = false (modal não rola)" "FAIL"
+fi
+
+if grep -qP 'tab5_ui_obj_set_scrollable\(\s*s_modal_backdrop\s*,\s*false' "${SRC}"; then
+    run_test "s_modal_backdrop scrollable = false (backdrop não rola)" "PASS"
+else
+    run_test "s_modal_backdrop scrollable = false (backdrop não rola)" "FAIL"
+fi
+
+for cfg_field in s_cfg_url s_cfg_token s_cfg_model s_cfg_max_tokens; do
+    if grep -qP "tab5_ui_obj_set_scrollable\(\s*${cfg_field}\s*,\s*false" "${SRC}"; then
+        run_test "${cfg_field} scrollable = false (campo altura fixa 42)" "PASS"
+    else
+        run_test "${cfg_field} scrollable = false (campo altura fixa 42)" "FAIL"
+    fi
+done
 
 echo ""
 

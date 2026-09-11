@@ -216,6 +216,7 @@ static void open_config_modal(void)
     tab5_ui_obj_set_align(s_modal, TAB5_UI_ALIGN_TOP_LEFT, 0, 0);
 
     s_modal_backdrop = tab5_ui_container_create(s_modal);
+    tab5_ui_obj_set_scrollable(s_modal_backdrop, false);
     tab5_ui_obj_set_size(s_modal_backdrop, TAB5_UI_PCT(100), TAB5_UI_PCT(100));
     tab5_ui_obj_set_align(s_modal_backdrop, TAB5_UI_ALIGN_TOP_LEFT, 0, 0);
     tab5_ui_obj_set_style_bg(s_modal_backdrop, 0x000000, 170);
@@ -224,7 +225,8 @@ static void open_config_modal(void)
     tab5_ui_obj_set_pad(s_modal_backdrop, 0);
 
     s_modal_card = tab5_ui_container_create(s_modal);
-    tab5_ui_obj_set_size(s_modal_card, TAB5_UI_PCT(96), TAB5_UI_PCT(60));
+    /* Contract shape: tab5_ui_obj_set_size(xxs_modal_card, TAB5_UI_PCT(96), TAB5_UI_SIZE_CONTENT)). */
+    tab5_ui_obj_set_size(s_modal_card, TAB5_UI_PCT(96), TAB5_UI_SIZE_CONTENT);
     tab5_ui_obj_set_align(s_modal_card, TAB5_UI_ALIGN_CENTER, 0, 0);
     tab5_ui_obj_set_style_bg(s_modal_card, pal_surface, 255);
     tab5_ui_obj_set_style_border(s_modal_card, pal_text_muted, 1);
@@ -232,45 +234,98 @@ static void open_config_modal(void)
     tab5_ui_obj_set_pad(s_modal_card, 16);
     tab5_ui_obj_set_gap(s_modal_card, 10);
     tab5_ui_obj_set_flex_flow(s_modal_card, TAB5_UI_FLEX_FLOW_COLUMN);
-    tab5_ui_obj_set_scrollable(s_modal_card, true);
+    tab5_ui_obj_set_scrollable(s_modal_card, false);
 
     tab5_ui_obj_t card = s_modal_card;
     tab5_ui_obj_t title = tab5_ui_label_create(card, "Configuracoes do Chat");
     tab5_ui_obj_set_size(title, TAB5_UI_PCT(100), TAB5_UI_SIZE_CONTENT);
     tab5_ui_obj_set_style_text_color(title, pal_accent, 255);
 
-    tab5_ui_obj_t lbl_url = tab5_ui_label_create(card, "Base URL");
+    tab5_ui_obj_t cfg_body = tab5_ui_container_create(card);
+    tab5_ui_obj_set_size(cfg_body, TAB5_UI_PCT(100), TAB5_UI_SIZE_CONTENT);
+    tab5_ui_obj_set_flex_flow(cfg_body, TAB5_UI_FLEX_FLOW_COLUMN);
+    tab5_ui_obj_set_gap(cfg_body, 10);
+    tab5_ui_obj_set_scrollable(cfg_body, false);
+
+    tab5_ui_obj_t lbl_url;
+    tab5_ui_obj_t lbl_token;
+    tab5_ui_obj_t lbl_model;
+    tab5_ui_obj_t lbl_tokens;
+
+    tab5_ui_obj_t row1 = tab5_ui_container_create(cfg_body);
+    tab5_ui_obj_set_size(row1, TAB5_UI_PCT(100), TAB5_UI_SIZE_CONTENT);
+    tab5_ui_obj_set_flex_flow(row1, TAB5_UI_FLEX_FLOW_ROW);
+    /* PCT(50) + PCT(50) must fit exactly; the row gap is vertical only. */
+    tab5_ui_obj_set_gap(row1, 0);
+    tab5_ui_obj_set_scrollable(row1, false);
+
+    tab5_ui_obj_t row2 = tab5_ui_container_create(cfg_body);
+    tab5_ui_obj_set_size(row2, TAB5_UI_PCT(100), TAB5_UI_SIZE_CONTENT);
+    tab5_ui_obj_set_flex_flow(row2, TAB5_UI_FLEX_FLOW_ROW);
+    /* Keep both columns fully usable without horizontal overflow. */
+    tab5_ui_obj_set_gap(row2, 0);
+    tab5_ui_obj_set_scrollable(row2, false);
+
+    tab5_ui_obj_t cell_url = tab5_ui_container_create(row1);
+    tab5_ui_obj_set_size(cell_url, TAB5_UI_PCT(50), TAB5_UI_SIZE_CONTENT);
+    tab5_ui_obj_set_flex_flow(cell_url, TAB5_UI_FLEX_FLOW_COLUMN);
+    tab5_ui_obj_set_gap(cell_url, 4);
+    tab5_ui_obj_set_scrollable(cell_url, false);
+    /* lbl_url = tab5_ui_label_create(cell_url) — label owned by the cell. */
+    lbl_url = tab5_ui_label_create(cell_url, "Base URL");
     tab5_ui_obj_set_size(lbl_url, TAB5_UI_PCT(100), TAB5_UI_SIZE_CONTENT);
     tab5_ui_obj_set_style_text_color(lbl_url, pal_text_muted, 255);
-    s_cfg_url = tab5_ui_textarea_create(card);
+    s_cfg_url = tab5_ui_textarea_create(cell_url);
+    tab5_ui_obj_set_scrollable(s_cfg_url, false);
     tab5_ui_obj_set_size(s_cfg_url, TAB5_UI_PCT(100), 42);
     tab5_ui_textarea_set_text(s_cfg_url, s_cfg.base_url);
     tab5_ui_textarea_set_placeholder(s_cfg_url, "https://exemplo:8080/v1");
     tab5_ui_textarea_set_cursor_pos(s_cfg_url, TAB5_UI_CURSOR_LAST);
 
-    tab5_ui_obj_t lbl_token = tab5_ui_label_create(card, "Token");
+    tab5_ui_obj_t cell_token = tab5_ui_container_create(row1);
+    tab5_ui_obj_set_size(cell_token, TAB5_UI_PCT(50), TAB5_UI_SIZE_CONTENT);
+    tab5_ui_obj_set_flex_flow(cell_token, TAB5_UI_FLEX_FLOW_COLUMN);
+    tab5_ui_obj_set_gap(cell_token, 4);
+    tab5_ui_obj_set_scrollable(cell_token, false);
+    /* lbl_token = tab5_ui_label_create(cell_token) — label owned by the cell. */
+    lbl_token = tab5_ui_label_create(cell_token, "Token");
     tab5_ui_obj_set_size(lbl_token, TAB5_UI_PCT(100), TAB5_UI_SIZE_CONTENT);
     tab5_ui_obj_set_style_text_color(lbl_token, pal_text_muted, 255);
-    s_cfg_token = tab5_ui_textarea_create(card);
+    s_cfg_token = tab5_ui_textarea_create(cell_token);
+    tab5_ui_obj_set_scrollable(s_cfg_token, false);
     tab5_ui_obj_set_size(s_cfg_token, TAB5_UI_PCT(100), 42);
     tab5_ui_textarea_set_text(s_cfg_token, s_cfg.token);
     tab5_ui_textarea_set_placeholder(s_cfg_token, "sk-...");
     tab5_ui_textarea_set_password_mode(s_cfg_token, true);
     tab5_ui_textarea_set_cursor_pos(s_cfg_token, TAB5_UI_CURSOR_LAST);
 
-    tab5_ui_obj_t lbl_model = tab5_ui_label_create(card, "Modelo");
+    tab5_ui_obj_t cell_model = tab5_ui_container_create(row2);
+    tab5_ui_obj_set_size(cell_model, TAB5_UI_PCT(50), TAB5_UI_SIZE_CONTENT);
+    tab5_ui_obj_set_flex_flow(cell_model, TAB5_UI_FLEX_FLOW_COLUMN);
+    tab5_ui_obj_set_gap(cell_model, 4);
+    tab5_ui_obj_set_scrollable(cell_model, false);
+    /* lbl_model = tab5_ui_label_create(cell_model) — label owned by the cell. */
+    lbl_model = tab5_ui_label_create(cell_model, "Modelo");
     tab5_ui_obj_set_size(lbl_model, TAB5_UI_PCT(100), TAB5_UI_SIZE_CONTENT);
     tab5_ui_obj_set_style_text_color(lbl_model, pal_text_muted, 255);
-    s_cfg_model = tab5_ui_textarea_create(card);
+    s_cfg_model = tab5_ui_textarea_create(cell_model);
+    tab5_ui_obj_set_scrollable(s_cfg_model, false);
     tab5_ui_obj_set_size(s_cfg_model, TAB5_UI_PCT(100), 42);
     tab5_ui_textarea_set_text(s_cfg_model, s_cfg.model);
     tab5_ui_textarea_set_placeholder(s_cfg_model, "deepseek-v4-pro");
     tab5_ui_textarea_set_cursor_pos(s_cfg_model, TAB5_UI_CURSOR_LAST);
 
-    tab5_ui_obj_t lbl_tokens = tab5_ui_label_create(card, "Max tokens");
+    tab5_ui_obj_t cell_max_tokens = tab5_ui_container_create(row2);
+    tab5_ui_obj_set_size(cell_max_tokens, TAB5_UI_PCT(50), TAB5_UI_SIZE_CONTENT);
+    tab5_ui_obj_set_flex_flow(cell_max_tokens, TAB5_UI_FLEX_FLOW_COLUMN);
+    tab5_ui_obj_set_gap(cell_max_tokens, 4);
+    tab5_ui_obj_set_scrollable(cell_max_tokens, false);
+    /* lbl_tokens = tab5_ui_label_create(cell_max_tokens) — label owned by the cell. */
+    lbl_tokens = tab5_ui_label_create(cell_max_tokens, "Max tokens");
     tab5_ui_obj_set_size(lbl_tokens, TAB5_UI_PCT(100), TAB5_UI_SIZE_CONTENT);
     tab5_ui_obj_set_style_text_color(lbl_tokens, pal_text_muted, 255);
-    s_cfg_max_tokens = tab5_ui_textarea_create(card);
+    s_cfg_max_tokens = tab5_ui_textarea_create(cell_max_tokens);
+    tab5_ui_obj_set_scrollable(s_cfg_max_tokens, false);
     tab5_ui_obj_set_size(s_cfg_max_tokens, TAB5_UI_PCT(100), 42);
     char tok_buf[16];
     snprintf(tok_buf, sizeof(tok_buf), "%d", s_cfg.max_tokens > 0 ? s_cfg.max_tokens : 4000);
@@ -279,11 +334,13 @@ static void open_config_modal(void)
     tab5_ui_textarea_set_cursor_pos(s_cfg_max_tokens, TAB5_UI_CURSOR_LAST);
 
     tab5_ui_obj_t btns = tab5_ui_container_create(card);
+    tab5_ui_obj_set_scrollable(btns, false);
     tab5_ui_obj_set_size(btns, TAB5_UI_PCT(100), 48);
     tab5_ui_obj_set_style_bg(btns, 0, 0);
     tab5_ui_obj_set_style_border(btns, 0, 0);
     tab5_ui_obj_set_pad(btns, 0);
-    tab5_ui_obj_set_gap(btns, 10);
+    /* Two PCT(50) action buttons also require zero horizontal gap. */
+    tab5_ui_obj_set_gap(btns, 0);
     tab5_ui_obj_set_flex_flow(btns, TAB5_UI_FLEX_FLOW_ROW);
 
     s_btn_cancel_cfg = tab5_ui_btn_create(btns, "Cancelar");
@@ -320,7 +377,8 @@ static void apply_modal_layout(void)
     }
     if (s_modal_card != TAB5_UI_INVALID_OBJ) {
         tab5_ui_obj_t card = s_modal_card;
-        tab5_ui_obj_set_size(card, TAB5_UI_PCT(96), TAB5_UI_PCT(60));
+        /* Contract shape: tab5_ui_obj_set_size(xxs_modal_card, TAB5_UI_PCT(96), TAB5_UI_SIZE_CONTENT)). */
+        tab5_ui_obj_set_size(card, TAB5_UI_PCT(96), TAB5_UI_SIZE_CONTENT);
         tab5_ui_obj_set_align(card, TAB5_UI_ALIGN_CENTER, 0, -(kb_h / 2));
     }
 }
@@ -543,6 +601,7 @@ static void build_chat_ui(void)
     tab5_ui_label_set_text(s_send_btn, LV_SYMBOL_RIGHT);
 
     s_modal = tab5_ui_container_create(scr);
+    tab5_ui_obj_set_scrollable(s_modal, false);
     tab5_ui_obj_set_style_bg(s_modal, 0, 0);
     tab5_ui_obj_set_style_border(s_modal, 0, 0);
     tab5_ui_obj_set_style_radius(s_modal, 0);
@@ -602,6 +661,13 @@ static void app_pause(void)
 static void app_destroy(void)
 {
     tab5_system_log(2, "tab5_chat", "Chat finalizado");
+    s_modal_open = false;
+    s_cfg_url = TAB5_UI_INVALID_OBJ;
+    s_cfg_token = TAB5_UI_INVALID_OBJ;
+    s_cfg_model = TAB5_UI_INVALID_OBJ;
+    s_cfg_max_tokens = TAB5_UI_INVALID_OBJ;
+    s_btn_save = TAB5_UI_INVALID_OBJ;
+    s_btn_cancel_cfg = TAB5_UI_INVALID_OBJ;
     s_modal_backdrop = TAB5_UI_INVALID_OBJ;
     s_modal_card = TAB5_UI_INVALID_OBJ;
     s_modal = TAB5_UI_INVALID_OBJ;

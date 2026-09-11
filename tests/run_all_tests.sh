@@ -88,8 +88,20 @@ run_suite "Build Test (tools/build.sh)" "${SCRIPT_DIR}/test_build.sh"
 # lista/modal preservados)
 run_suite "Scroll Capture Contract (row/spacer/bubble/input sem scroll)" "${SCRIPT_DIR}/test_scroll_capture_contract.sh"
 
-# Suite 17: Scrollbar Contract (input sem scrollbar, system bubble sem overflow)
-run_suite "Scrollbar Contract (gap system=0, input_ta PCT(100), scrollables únicos)" "${SCRIPT_DIR}/test_scrollbar_contract.sh"
+# Suite 17: Scrollbar Contract (input sem scrollbar; único scrollable do app é
+# s_messages_cont — nada no modal é scrollable)
+run_suite "Scrollbar Contract (gap system=0, input_ta PCT(100), único scrollable s_messages_cont)" "${SCRIPT_DIR}/test_scrollbar_contract.sh"
+
+# Suite 18: Modal Interior Contract (btns, modal/backdrop, cfg_*, botões, cleanup)
+run_suite "Modal Interior Contract (btns/modal/backdrop/campos/btns_action/cleanup)" "${SCRIPT_DIR}/test_modal_interior_contract.sh"
+
+# Suite 19: Modal Compact 2x2 Contract (nenhum objeto do modal rolável,
+# cfg_body=false, card PCT(96)xSIZE_CONTENT, grade compacta 2x2, conteúdo
+# cabe com teclado em retrato/paisagem, campos e botões acessíveis)
+run_suite "Modal Compact 2x2 Contract (cfg_body=false, card auto-height, grade 2x2, fit teclado)" "${SCRIPT_DIR}/test_modal_compact_contract.sh"
+
+# Suite 20: Modal lifecycle cleanup
+run_suite "Modal Lifecycle Contract (destroy invalidates handles and closes modal)" "${SCRIPT_DIR}/test_modal_lifecycle.sh"
 
 echo "========================================="
 echo "  Test Suites Summary"

@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 # test_modal_landscape_keyboard.sh - Contrato do modal CHAT em paisagem com teclado.
 # Valida o plano aprovado (contrato relativo): modal/backdrop PCT(100) x PCT(100),
-# card PCT(96) x PCT(60), CENTER offset -(kb_h/2), sem dimensões absolutas
-# (w/h/card_h/usable_h) no caminho modal. O card resolve contra a tela VISUAL;
-# quando o host está stale (720x1280) e a tela visual é 1280x720, a geometria
-# segue o visual e o teclado preserva o offset centralizado.
+# card PCT(96) x SIZE_CONTENT (altura automática), CENTER offset -(kb_h/2), sem
+# dimensões absolutas (w/h/card_h/usable_h) no caminho modal. O card resolve
+# contra a tela VISUAL; quando o host está stale (720x1280) e a tela visual é
+# 1280x720, a geometria segue o visual e o teclado preserva o offset
+# centralizado. A grade compacta 2x2 garante que o conteúdo caiba com o teclado
+# aberto (nada rola); cenários extremos de teclado são documentados como
+# clipping aceito (sem scroll).
 # Padrão: programa C autocontido com mock SDK instrumentado, compilado por gcc.
 set -euo pipefail
 
@@ -85,7 +88,7 @@ static void apply_modal_layout(void) {
         tab5_ui_obj_set_align(OBJ_BACKDROP, TAB5_UI_ALIGN_TOP_LEFT, 0, 0);
     }
     if (OBJ_CARD != 0) {
-        tab5_ui_obj_set_size(OBJ_CARD, TAB5_UI_PCT(96), TAB5_UI_PCT(60));
+        tab5_ui_obj_set_size(OBJ_CARD, TAB5_UI_PCT(96), TAB5_UI_SIZE_CONTENT);
         tab5_ui_obj_set_align(OBJ_CARD, TAB5_UI_ALIGN_CENTER, 0, -(kb_h / 2));
     }
 }
@@ -106,31 +109,25 @@ static void open_config_modal_landscape(void) {
 
     /* Card */
     OBJ_CARD = mock_create(OBJ_MODAL);
-    tab5_ui_obj_set_size(OBJ_CARD, TAB5_UI_PCT(96), TAB5_UI_PCT(60));
+    tab5_ui_obj_set_size(OBJ_CARD, TAB5_UI_PCT(96), TAB5_UI_SIZE_CONTENT);
     tab5_ui_obj_set_align(OBJ_CARD, TAB5_UI_ALIGN_CENTER, 0, 0);
 
     apply_modal_layout();
 }
 
-/* ── Field content estimate for landscape modal ── */
+/* ── Estimativa de conteúdo do card para a validação de "cabe" ── */
 /*
- * Card internal layout (from src/main.c):
- *   Padding top:     16px
- *   Title label      ~24px
- *   Base URL label   ~18px
- *   Textarea          42px
- *   Token label      ~18px
- *   Textarea          42px
- *   Model label      ~18px
- *   Textarea          42px
- *   Max tokens label ~18px
- *   Textarea          42px
- *   Buttons row       48px
- *   Gaps: 10px × ~9 = 90px
- *   Padding bottom:  16px
- *   Total ≈ 376px
+ * Compacto 2x2 (plano aprovado):
+ *   Padding card (top+bottom)  32px
+ *   Título                      24px
+ *   Gaps do card (2x10)         20px
+ *   Grade 2x2: 2 x (label 18 + gap 4 + textarea 42) + gap das linhas 10
+ *                             = 2 x 64 + 10 = 138px
+ *   Botões (btns)               48px
+ *   Total                      ≈ 262px
+ * (Coluna única antiga ≈ 414px — NÃO cabe em paisagem com teclado 400.)
  */
-#define ESTIMATED_CONTENT_H 376
+#define ESTIMATED_CONTENT_H 262
 
 /* ── Finders ── */
 static int find_ss(int obj, int *ow, int *oh) {
@@ -179,9 +176,9 @@ int main(void) {
         check(find_ss(OBJ_BACKDROP, &bw, &bh), "backdrop: sized");
         check(bw == -1100 && bh == -1100, "landscape: backdrop = PCT(100) x PCT(100)");
         check(find_ss(OBJ_CARD, &cw, &ch), "card: sized");
-        check(cw == -1096 && ch == -1060, "landscape: card = PCT(96) x PCT(60)");
-        check(pctpx(1280, 96) == 1229 && pctpx(720, 60) == 432,
-              "landscape: card resolvido 1229x432 (visual 1280x720)");
+        check(cw == -1096 && ch == -1, "landscape: card = PCT(96) x SIZE_CONTENT (auto-height)");
+        check(pctpx(1280, 96) == 1229,
+              "landscape: card largura resolvida 1229 (96% do visual 1280)");
         int a, oy;
         check(find_sa(OBJ_CARD, &a, &oy), "card: aligned");
         check(a == TAB5_UI_ALIGN_CENTER && oy == 0, "landscape: CENTER offset 0 (sem teclado)");
@@ -199,14 +196,15 @@ int main(void) {
 
         int cw, ch, oy;
         check(find_ss(OBJ_CARD, &cw, &ch), "card: sized");
-        check(cw == -1096 && ch == -1060, "landscape+mod_kb: card PCT(96) x PCT(60) (sem card_h)");
-        check(pctpx(720, 60) >= ESTIMATED_CONTENT_H,
-              "landscape+mod_kb: card resolvido 432px acomoda os campos");
+        check(cw == -1096 && ch == -1,
+              "landscape+mod_kb: card PCT(96) x SIZE_CONTENT (sem card_h)");
+        check(mock_h - mock_kb_h >= ESTIMATED_CONTENT_H,
+              "landscape+mod_kb: visível 520px >= 262px — conteúdo cabe (nada rola)");
         int a;
         check(find_sa(OBJ_CARD, &a, &oy), "landscape+mod_kb: card positioned");
         check(a == TAB5_UI_ALIGN_CENTER && oy == -(200 / 2),
               "landscape+mod_kb: CENTER offset = -(kb_h/2) = -100");
-        printf("  card_h=%d, content=%d, y=%d\n\n", pctpx(720, 60), ESTIMATED_CONTENT_H, oy);
+        printf("  card_h=-1 (auto), content=%d, y=%d\n\n", ESTIMATED_CONTENT_H, oy);
     }
 
     /* ─── Scenario 3: Landscape + large keyboard ─── */
@@ -218,12 +216,12 @@ int main(void) {
 
         int cw, ch, a, oy;
         check(find_ss(OBJ_CARD, &cw, &ch), "card: sized");
-        check(cw == -1096 && ch == -1060, "landscape+large_kb: card PCT(96) x PCT(60)");
-        check(pctpx(720, 60) >= ESTIMATED_CONTENT_H,
-              "landscape+large_kb: card 432px ainda acomoda os campos (PCT(60) do visual)");
+        check(cw == -1096 && ch == -1, "landscape+large_kb: card PCT(96) x SIZE_CONTENT");
+        check(mock_h - mock_kb_h >= ESTIMATED_CONTENT_H,
+              "landscape+large_kb: visível 320px >= 262px — grade 2x2 cabe com kb 400");
         check(find_sa(OBJ_CARD, &a, &oy), "landscape+large_kb: card positioned");
         check(oy == -(400 / 2), "landscape+large_kb: CENTER offset = -(400/2) = -200");
-        printf("  card resolvido=%dpx, y=%d\n\n", pctpx(720, 60), oy);
+        printf("  card_h=-1 (auto), y=%d\n\n", oy);
     }
 
     /* ─── Scenario 4: Landscape + keyboard fills most of screen ─── */
@@ -235,11 +233,11 @@ int main(void) {
 
         int cw, ch, a, oy;
         check(find_ss(OBJ_CARD, &cw, &ch), "card: sized");
-        check(cw == -1096 && ch == -1060, "landscape+extreme_kb: card permanece PCT(96) x PCT(60)");
+        check(cw == -1096 && ch == -1, "landscape+extreme_kb: card permanece PCT(96) x SIZE_CONTENT");
         check(find_sa(OBJ_CARD, &a, &oy), "landscape+extreme_kb: card positioned");
         check(oy == -(550 / 2), "landscape+extreme_kb: CENTER offset = -(550/2) = -275");
         check(720 - 550 < ESTIMATED_CONTENT_H,
-              "landscape+extreme_kb: área visível 170px < 376px → conteúdo rola (card scrollable)");
+              "landscape+extreme_kb: visível 170px < 262px → clipping aceito (contrato sem scroll)");
         printf("  card: %dx%d offset=%d\n\n", cw, ch, oy);
     }
 
@@ -263,8 +261,8 @@ int main(void) {
         find_ss(OBJ_CARD, NULL, &ch_after);
         find_sa(OBJ_CARD, &a_after, &oy_after);
 
-        check(ch_after == -1060 && oy_after == -150,
-              "apply_modal: card permanece PCT(60) com offset -(kb_h/2) = -150");
+        check(ch_after == -1 && oy_after == -150,
+              "apply_modal: card permanece SIZE_CONTENT (auto) com offset -(kb_h/2) = -150");
         check(oy_after != oy_before, "apply_modal: offset mudou com o teclado");
         printf("  before: ch=%d y=%d, after: ch=%d y=%d\n\n",
                ch_before, oy_before, ch_after, oy_after);
@@ -327,12 +325,15 @@ int main(void) {
         check(pw == -1100 && ph == -1100, "portrait: modal = PCT(100) x PCT(100)");
         check(lw == -1100 && lh == -1100, "landscape: modal = PCT(100) x PCT(100)");
         check(cw_p == -1096 && cw_l == -1096, "card width PCT(96) em ambas as orientações");
-        check(ch_p == -1060 && ch_l == -1060, "card height PCT(60) em ambas as orientações");
-        check(pctpx(1280, 60) > pctpx(720, 60),
-              "landscape: card resolvido é mais baixo que o retrato (432 < 768 — espaço visual)");
+        check(ch_p == -1 && ch_l == -1,
+              "card height SIZE_CONTENT (auto) em ambas as orientações — sem PCT(60)");
+        check(1280 - 400 >= ESTIMATED_CONTENT_H,
+              "portrait: visível 880px >= 262px (conteúdo cabe com teclado)");
+        check(720 - 400 >= ESTIMATED_CONTENT_H,
+              "landscape: visível 320px >= 262px (grade 2x2 cabe com teclado)");
         check(oy_p == -200 && oy_l == -200, "offset -(400/2) idêntico em ambas as orientações");
-        printf("  portrait: card %dx%d, landscape: card %dx%d\n\n",
-               pctpx(720, 96), pctpx(1280, 60), pctpx(1280, 96), pctpx(720, 60));
+        printf("  portrait: card %dxauto, landscape: card %dxauto\n\n",
+               pctpx(720, 96), pctpx(1280, 96));
     }
 
     /* ─── Scenario 8: Card width sempre PCT(96), independente da resolução ─── */
