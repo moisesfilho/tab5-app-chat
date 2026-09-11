@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test_modal_relative_contract.sh - TDD: contrato do modal RELATIVO (100% x 100%).
+# test_modal_relative_contract.sh - contrato verificado do modal RELATIVO (100% x 100%).
 #
 # Extrai os corpos REAIS de open_config_modal/apply_modal_layout de src/main.c
 # (não replica a implementação) e exige o contrato relativo:
@@ -15,8 +15,7 @@
 # tela visual é 1280x720. Como tudo é PCT, o caminho modal resolve contra a
 # tela visual e não vaza dimensões do host.
 #
-# Estado TDD: enquanto src/main.c não for alterado, as asserções do novo
-# contrato FALHAM (esperado). O script sai com código 1 para sinalizar o RED.
+# Estado do contrato: as asserções verificam a implementação aprovada em src/main.c.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -163,8 +162,8 @@ require(pct(100) == -1100 and pct(96) == -1096 and pct(60) == -1060,
 
 print()
 print(f"=== Modal relative contract (estática): {'ALL PASSED' if failures == 0 else str(failures) + ' FAIL(s)'} ===")
-print("    (falhas do novo contrato são ESPERADAS — TDD RED enquanto src/main.c")
-print("     continua com PCT(100) x h / card_h / TOP_LEFT card_top)")
+print("    (contrato verificado: PCT(100) x PCT(100), card relativo e")
+print("     TOP_LEFT preservado para modal/backdrop)")
 sys.exit(1 if failures else 0)
 PY
 STATIC_RESULT=$?
@@ -262,13 +261,12 @@ fi
 
 echo ""
 echo "=== Modal Relative Contract: resumo ==="
-echo "  estática (funções reais): $([ ${STATIC_RESULT} -eq 0 ] && echo OK || echo 'RED — falhas TDD esperadas')"
+echo "  estática (funções reais): $([ ${STATIC_RESULT} -eq 0 ] && echo OK || echo 'FALHOU — verificação do contrato')"
 echo "  runtime (geometria alvo): $([ ${RUNTIME_RESULT} -eq 0 ] && echo OK || echo FALHOU)"
 
-# Veredito: RED enquanto src/main.c mantiver o layout modal com dimensões
-# absolutas (h/card_h/usable_h/get_display_size no caminho modal).
+# Veredito: o contrato relativo do modal deve permanecer verificado em src/main.c.
 if [ ${STATIC_RESULT} -ne 0 ]; then
-    echo "[FAIL] Contrato do modal relativo NÃO satisfeito (esperado: TDD RED)"
+    echo "[FAIL] Contrato do modal relativo NÃO satisfeito"
     exit 1
 fi
 exit ${RUNTIME_RESULT}

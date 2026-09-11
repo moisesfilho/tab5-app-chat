@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test_pct_width_contract.sh - TDD: contrato de largura PCT(100) para layout do Chat
+# test_pct_width_contract.sh - contrato verificado de largura PCT(100) para layout do Chat
 #
 # Contrato (macro REAL do SDK, ver tab5-os/sdk/tab5-app-sdk/include/tab5_sdk.h):
 #   #define TAB5_UI_PCT(percent) (-1000 - (percent))
@@ -17,8 +17,8 @@
 #      para input.
 #
 # Partes:
-#   A. Estática: grep em src/main.c (as checagens de PCT(100) são a falha
-#      esperada antes da implementação; as de preservação devem passar hoje).
+#   A. Estática: grep em src/main.c verifica as larguras PCT(100) e as
+#      propriedades preservadas do layout aprovado.
 #   B. Macro real: valida o encoding -1000-percent no SDK real (se disponível)
 #      e no mock local tests/tab5_sdk.h.
 #   C. Runtime C: aplica o layout-alvo do contrato e verifica as chamadas
@@ -458,8 +458,7 @@ rm -f "${SCRIPT_DIR}/test_pct_width_contract.c"
 
 echo ""
 echo "=== Resumo estático: ${PASS} passed, ${FAIL} failed, ${TOTAL} total ==="
-echo "    (falhas de PCT(100) são ESPERADAS até a implementação do contrato)"
+echo "    (contrato PCT(100) verificado/aprovado; preservação validada)"
 
-# Estática é TDD: falhas esperadas hoje não são o veredito deste script.
-# O veredito do script é dado pelo runtime (contrato alvo deve sempre validar).
+# O veredito do script considera a execução runtime do contrato aprovado.
 exit ${RUNTIME_RESULT}

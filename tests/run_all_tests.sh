@@ -78,11 +78,18 @@ run_suite "Bubbles Width Contract (system 100%, user/assistant 80%)" "${SCRIPT_D
 # Suite 13: Real Layout Call Contract
 run_suite "Real Layout Call Contract (PCT + stale host)" "${SCRIPT_DIR}/test_layout_call_contract.sh"
 
-# Suite 14: Modal Relative Contract (TDD RED esperado — layout 100% relativo)
+# Suite 14: Modal Relative Contract (layout 100% relativo verificado)
 run_suite "Modal Relative Contract (PCT(100) x PCT(100), card CENTER -kb_h/2)" "${SCRIPT_DIR}/test_modal_relative_contract.sh"
 
 # Suite 15: Build Test
 run_suite "Build Test (tools/build.sh)" "${SCRIPT_DIR}/test_build.sh"
+
+# Suite 16: Scroll Capture Contract (balões/input sem scroll,
+# lista/modal preservados)
+run_suite "Scroll Capture Contract (row/spacer/bubble/input sem scroll)" "${SCRIPT_DIR}/test_scroll_capture_contract.sh"
+
+# Suite 17: Scrollbar Contract (input sem scrollbar, system bubble sem overflow)
+run_suite "Scrollbar Contract (gap system=0, input_ta PCT(100), scrollables únicos)" "${SCRIPT_DIR}/test_scrollbar_contract.sh"
 
 echo "========================================="
 echo "  Test Suites Summary"

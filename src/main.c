@@ -119,21 +119,24 @@ static void build_bubble(const chat_message_t *msg)
     bool is_system = (strcmp(msg->role, "system") == 0);
 
     tab5_ui_obj_t row = tab5_ui_container_create(s_messages_cont);
+    tab5_ui_obj_set_scrollable(row, false);
     tab5_ui_obj_set_size(row, TAB5_UI_PCT(100), TAB5_UI_SIZE_CONTENT);
     tab5_ui_obj_set_style_bg(row, 0, 0);
     tab5_ui_obj_set_style_border(row, 0, 0);
     tab5_ui_obj_set_pad(row, 2);
-    tab5_ui_obj_set_gap(row, 4);
+    tab5_ui_obj_set_gap(row, is_system ? 0 : 4);
     tab5_ui_obj_set_flex_flow(row, TAB5_UI_FLEX_FLOW_ROW);
 
     if (is_user || is_system) {
         tab5_ui_obj_t spacer = tab5_ui_container_create(row);
+        tab5_ui_obj_set_scrollable(spacer, false);
         tab5_ui_obj_set_size(spacer, 0, 0);
         tab5_ui_obj_set_style_bg(spacer, 0, 0);
         tab5_ui_obj_set_style_border(spacer, 0, 0);
         tab5_ui_obj_set_flex_grow(spacer, 1);
         if (!is_user) {
             tab5_ui_obj_t second_spacer = tab5_ui_container_create(row);
+            tab5_ui_obj_set_scrollable(second_spacer, false);
             tab5_ui_obj_set_size(second_spacer, 0, 0);
             tab5_ui_obj_set_style_bg(second_spacer, 0, 0);
             tab5_ui_obj_set_style_border(second_spacer, 0, 0);
@@ -142,6 +145,7 @@ static void build_bubble(const chat_message_t *msg)
     }
 
     tab5_ui_obj_t bubble = tab5_ui_container_create(row);
+    tab5_ui_obj_set_scrollable(bubble, false);
     tab5_ui_obj_set_size(bubble, is_system ? TAB5_UI_PCT(100) : TAB5_UI_PCT(80), TAB5_UI_SIZE_CONTENT);
     tab5_ui_obj_set_pad(bubble, PAD_SM);
     tab5_ui_obj_set_gap(bubble, 0);
@@ -515,6 +519,7 @@ static void build_chat_ui(void)
     tab5_ui_obj_set_scrollable(s_messages_cont, true);
 
     s_input_cont = tab5_ui_container_create(scr);
+    tab5_ui_obj_set_scrollable(s_input_cont, false);
     tab5_ui_obj_set_style_bg(s_input_cont, pal_surface, 255);
     tab5_ui_obj_set_style_border(s_input_cont, pal_border, 1);
     tab5_ui_obj_set_style_radius(s_input_cont, 0);
@@ -523,6 +528,8 @@ static void build_chat_ui(void)
     tab5_ui_obj_set_flex_flow(s_input_cont, TAB5_UI_FLEX_FLOW_ROW);
 
     s_input_ta = tab5_ui_textarea_create(s_input_cont);
+    tab5_ui_obj_set_scrollable(s_input_ta, false);
+    tab5_ui_obj_set_size(s_input_ta, TAB5_UI_SIZE_CONTENT, TAB5_UI_PCT(100));
     tab5_ui_obj_set_flex_grow(s_input_ta, 1);
     tab5_ui_textarea_set_placeholder(s_input_ta, "Digite sua mensagem...");
     tab5_ui_textarea_set_cursor_pos(s_input_ta, TAB5_UI_CURSOR_LAST);
