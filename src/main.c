@@ -404,23 +404,29 @@ static void close_config_modal(void)
 
 static void save_config_modal(void)
 {
-    const char *url = tab5_ui_textarea_get_text(s_cfg_url);
-    const char *tok = tab5_ui_textarea_get_text(s_cfg_token);
-    const char *model = tab5_ui_textarea_get_text(s_cfg_model);
-    const char *tok_str = tab5_ui_textarea_get_text(s_cfg_max_tokens);
+    char url_copy[256];
+    char tok_copy[256];
+    char model_copy[128];
+    char tok_str_copy[32];
+    if (tab5_ui_textarea_copy_text(s_cfg_url, url_copy, sizeof(url_copy)) < 0 ||
+        tab5_ui_textarea_copy_text(s_cfg_token, tok_copy, sizeof(tok_copy)) < 0 ||
+        tab5_ui_textarea_copy_text(s_cfg_model, model_copy, sizeof(model_copy)) < 0 ||
+        tab5_ui_textarea_copy_text(s_cfg_max_tokens, tok_str_copy, sizeof(tok_str_copy)) < 0) {
+        return;
+    }
 
     memset(&s_cfg, 0, sizeof(s_cfg));
-    if (url != NULL && url[0] != '\0') {
-        strncpy(s_cfg.base_url, url, sizeof(s_cfg.base_url) - 1);
+    if (url_copy[0] != '\0') {
+        strncpy(s_cfg.base_url, url_copy, sizeof(s_cfg.base_url) - 1);
     }
-    if (tok != NULL && tok[0] != '\0') {
-        strncpy(s_cfg.token, tok, sizeof(s_cfg.token) - 1);
+    if (tok_copy[0] != '\0') {
+        strncpy(s_cfg.token, tok_copy, sizeof(s_cfg.token) - 1);
     }
-    if (model != NULL && model[0] != '\0') {
-        strncpy(s_cfg.model, model, sizeof(s_cfg.model) - 1);
+    if (model_copy[0] != '\0') {
+        strncpy(s_cfg.model, model_copy, sizeof(s_cfg.model) - 1);
     }
-    if (tok_str != NULL && tok_str[0] != '\0') {
-        int val = atoi(tok_str);
+    if (tok_str_copy[0] != '\0') {
+        int val = atoi(tok_str_copy);
         if (val > 0) {
             s_cfg.max_tokens = val;
         } else {
@@ -442,8 +448,9 @@ static void do_send(void)
     if (s_input_ta == TAB5_UI_INVALID_OBJ) {
         return;
     }
-    const char *text = tab5_ui_textarea_get_text(s_input_ta);
-    if (text == NULL || text[0] == '\0') {
+    char text[2048] = {0};
+    int32_t text_len = tab5_ui_textarea_copy_text(s_input_ta, text, sizeof(text));
+    if (text_len < 0 || text[0] == '\0') {
         tab5_sound_play_beep(300, 40);
         return;
     }

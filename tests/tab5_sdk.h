@@ -77,7 +77,13 @@ static inline void tab5_ui_textarea_set_text(tab5_ui_obj_t obj, const char *text
 static inline void tab5_ui_textarea_set_placeholder(tab5_ui_obj_t obj, const char *text) { (void)obj; (void)text; }
 static inline void tab5_ui_textarea_set_cursor_pos(tab5_ui_obj_t obj, int32_t pos) { (void)obj; (void)pos; }
 static inline void tab5_ui_textarea_set_password_mode(tab5_ui_obj_t obj, bool mode) { (void)obj; (void)mode; }
-static inline const char* tab5_ui_textarea_get_text(tab5_ui_obj_t obj) { (void)obj; return ""; }
+static inline int32_t tab5_ui_textarea_copy_text(tab5_ui_obj_t obj, char *buffer, uint32_t capacity) {
+    (void)obj;
+    if (buffer != NULL && capacity > 0) {
+        buffer[0] = '\0';
+    }
+    return 0;
+}
 static inline uint32_t tab5_ui_theme_get_color(int color_id) { (void)color_id; return 0; }
 static inline void tab5_ui_show_toast(const char *text, int duration) { (void)text; (void)duration; }
 static inline int32_t tab5_ui_keyboard_get_height(void) { return 0; }
